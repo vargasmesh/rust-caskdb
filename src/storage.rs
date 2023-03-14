@@ -1,7 +1,7 @@
-pub struct Entry {
+pub struct Entry<'a> {
     timestamp: i64,
-    key: Vec<u8>,
-    value: Vec<u8>,
+    key: &'a [u8],
+    value: &'a [u8],
 }
 
 pub struct DiskStorage {}
@@ -12,10 +12,12 @@ impl DiskStorage {
     }
 
     fn serialize_entry(&self, entry: &Entry) -> Vec<u8> {
-        let mut buf = Vec::new();
+        let key_size = entry.key.len();
+        let value_size = entry.value.len();
+        let mut buf = Vec::with_capacity(24 + key_size + value_size);
         buf.extend_from_slice(&entry.timestamp.to_be_bytes());
-        buf.extend_from_slice(&entry.key.len().to_be_bytes());
-        buf.extend_from_slice(&entry.value.len().to_be_bytes());
+        buf.extend_from_slice(&key_size.to_be_bytes());
+        buf.extend_from_slice(&value_size.to_be_bytes());
         buf.extend_from_slice(&entry.key);
         buf.extend_from_slice(&entry.value);
         buf
@@ -31,8 +33,8 @@ mod tests {
     fn test_serialize_entry() {
         let entry = Entry {
             timestamp: datetime!(2021-01-01 00:00:00).assume_utc().unix_timestamp(),
-            key: "foo".as_bytes().to_vec(),
-            value: "bar".as_bytes().to_vec(),
+            key: "foo".as_bytes(),
+            value: "bar".as_bytes(),
         };
         let storage = DiskStorage::new();
         let serialized = storage.serialize_entry(&entry);
