@@ -1,4 +1,5 @@
 use crc::{Crc, CRC_16_IBM_SDLC};
+use std::fs::{File, OpenOptions};
 
 const X25: Crc<u16> = Crc::<u16>::new(&CRC_16_IBM_SDLC);
 
@@ -8,11 +9,24 @@ pub struct Entry<'a> {
     value: &'a [u8],
 }
 
-pub struct DiskStorage {}
+pub struct DiskStorage {
+    file: std::fs::File,
+}
 
 impl DiskStorage {
-    pub fn new() -> Self {
-        DiskStorage {}
+    pub fn new(filename: String) -> Self {
+        let file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .open(filename)
+            .unwrap();
+
+        Self { file }
+    }
+
+    pub fn from_file(file: File) -> Self {
+        Self { file }
     }
 
     fn serialize_entry(&self, entry: &Entry) -> Vec<u8> {
@@ -38,6 +52,7 @@ impl DiskStorage {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tempfile::tempfile;
     use time_macros::datetime;
 
     #[test]
@@ -47,7 +62,8 @@ mod tests {
             key: "foo".as_bytes(),
             value: "bar".as_bytes(),
         };
-        let storage = DiskStorage::new();
+        let file = tempfile().unwrap();
+        let storage = DiskStorage::from_file(file);
         let serialized = storage.serialize_entry(&entry);
         assert_eq!(
             serialized,
