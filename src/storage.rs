@@ -1,6 +1,6 @@
 use crc::{Crc, CRC_16_IBM_SDLC};
 
-const X25: Crc<u16> = crc::Crc::<u16>::new(&crc::CRC_16_IBM_SDLC);
+const X25: Crc<u16> = Crc::<u16>::new(&CRC_16_IBM_SDLC);
 
 pub struct Entry<'a> {
     timestamp: i64,
