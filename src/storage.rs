@@ -18,21 +18,20 @@ impl DiskStorage {
     fn serialize_entry(&self, entry: &Entry) -> Vec<u8> {
         let key_size = entry.key.len();
         let value_size = entry.value.len();
-        let mut buf = Vec::with_capacity(24 + key_size + value_size);
+        let capacity = 26 + key_size + value_size;
+        let mut buf = vec![0; capacity];
 
-        buf.extend_from_slice(&entry.timestamp.to_be_bytes());
-        buf.extend_from_slice(&key_size.to_be_bytes());
-        buf.extend_from_slice(&value_size.to_be_bytes());
-        buf.extend_from_slice(&entry.key);
-        buf.extend_from_slice(&entry.value);
+        buf[2..10].copy_from_slice(&entry.timestamp.to_be_bytes());
+        buf[10..18].copy_from_slice(&key_size.to_be_bytes());
+        buf[18..26].copy_from_slice(&value_size.to_be_bytes());
+        buf[26..26 + key_size].copy_from_slice(&entry.key);
+        buf[26 + key_size..].copy_from_slice(&entry.value);
 
-        let mut data: Vec<u8> = Vec::with_capacity(buf.len() + 2);
+        let crc = X25.checksum(&buf[2..capacity]).to_be_bytes();
 
-        let crc = X25.checksum(buf.as_slice()).to_be_bytes();
-        data.extend_from_slice(&crc);
-        data.append(&mut buf);
+        buf[0..2].copy_from_slice(&crc);
 
-        data
+        buf
     }
 }
 
