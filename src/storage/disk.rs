@@ -4,25 +4,9 @@ use std::{
     io::Write,
 };
 
-use crate::bitcask::Storage;
+use crate::bitcask::{Entry, Storage};
 
 const X25: Crc<u16> = Crc::<u16>::new(&CRC_16_IBM_SDLC);
-
-pub struct Entry<'a> {
-    key: &'a [u8],
-    value: &'a [u8],
-    timestamp: u64,
-}
-
-impl<'a> Entry<'a> {
-    pub fn new(key: &'a [u8], value: &'a [u8], timestamp: u64) -> Self {
-        Self {
-            key,
-            value,
-            timestamp,
-        }
-    }
-}
 
 pub struct DiskStorage {
     active_data_file: std::fs::File,
@@ -30,7 +14,7 @@ pub struct DiskStorage {
 
 impl DiskStorage {
     pub fn new(directory: &str) -> Self {
-        create_dir_all(directory);
+        create_dir_all(directory).unwrap();
         let file = File::create(format!(
             "{}/{}",
             directory,

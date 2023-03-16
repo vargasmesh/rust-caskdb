@@ -1,9 +1,23 @@
-use std::time;
-
-use crate::{pkg::now, storage::Entry};
+use crate::pkg::now;
 
 pub trait Storage {
     fn write(&mut self, entry: &Entry);
+}
+
+pub struct Entry<'a> {
+    pub key: &'a [u8],
+    pub value: &'a [u8],
+    pub timestamp: u64,
+}
+
+impl<'a> Entry<'a> {
+    pub fn new(key: &'a [u8], value: &'a [u8], timestamp: u64) -> Self {
+        Self {
+            key,
+            value,
+            timestamp,
+        }
+    }
 }
 
 pub struct Bitcask {
