@@ -1,5 +1,8 @@
 use crc::{Crc, CRC_16_IBM_SDLC};
-use std::{fs::File, io::Write};
+use std::{
+    fs::{create_dir_all, File},
+    io::Write,
+};
 
 use crate::bitcask::Storage;
 
@@ -26,10 +29,21 @@ pub struct DiskStorage {
 }
 
 impl DiskStorage {
-    pub fn from_file(file: File) -> Self {
+    pub fn new(directory: &str) -> Self {
+        create_dir_all(directory);
+        let file = File::create(format!(
+            "{}/{}",
+            directory,
+            DiskStorage::create_active_filename()
+        ))
+        .unwrap();
         Self {
             active_data_file: file,
         }
+    }
+
+    fn create_active_filename() -> String {
+        cuid2::create_id()
     }
 
     fn serialize_entry(&self, entry: &Entry) -> Vec<u8> {
@@ -64,7 +78,7 @@ impl Storage for DiskStorage {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::tempfile;
+    use tempfile::tempdir;
     use time_macros::datetime;
 
     #[test]
@@ -74,8 +88,8 @@ mod tests {
             key: "foo".as_bytes(),
             value: "bar".as_bytes(),
         };
-        let file = tempfile().unwrap();
-        let storage = DiskStorage::from_file(file);
+        let directory = tempdir().unwrap();
+        let storage = DiskStorage::new(directory.path().to_str().unwrap());
         let serialized = storage.serialize_entry(&entry);
         assert_eq!(
             serialized,
