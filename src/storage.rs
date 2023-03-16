@@ -7,9 +7,19 @@ use std::{
 const X25: Crc<u16> = Crc::<u16>::new(&CRC_16_IBM_SDLC);
 
 pub struct Entry<'a> {
-    timestamp: i64,
     key: &'a [u8],
     value: &'a [u8],
+    timestamp: u64,
+}
+
+impl<'a> Entry<'a> {
+    pub fn new(key: &'a [u8], value: &'a [u8], timestamp: u64) -> Self {
+        Self {
+            key,
+            value,
+            timestamp,
+        }
+    }
 }
 
 pub struct DiskStorage {
@@ -68,7 +78,7 @@ mod tests {
     #[test]
     fn test_serialize_entry() {
         let entry = Entry {
-            timestamp: datetime!(2021-01-01 00:00:00).assume_utc().unix_timestamp(),
+            timestamp: datetime!(2021-01-01 00:00:00).assume_utc().unix_timestamp() as u64,
             key: "foo".as_bytes(),
             value: "bar".as_bytes(),
         };
