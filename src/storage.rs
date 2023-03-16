@@ -1,8 +1,5 @@
 use crc::{Crc, CRC_16_IBM_SDLC};
-use std::{
-    fs::{File, OpenOptions},
-    io::Write,
-};
+use std::{fs::File, io::Write};
 
 use crate::bitcask::Storage;
 
@@ -25,23 +22,14 @@ impl<'a> Entry<'a> {
 }
 
 pub struct DiskStorage {
-    file: std::fs::File,
+    active_data_file: std::fs::File,
 }
 
 impl DiskStorage {
-    pub fn new(filename: String) -> Self {
-        let file = OpenOptions::new()
-            .read(true)
-            .write(true)
-            .create(true)
-            .open(filename)
-            .unwrap();
-
-        Self { file }
-    }
-
     pub fn from_file(file: File) -> Self {
-        Self { file }
+        Self {
+            active_data_file: file,
+        }
     }
 
     fn serialize_entry(&self, entry: &Entry) -> Vec<u8> {
@@ -67,9 +55,9 @@ impl DiskStorage {
 impl Storage for DiskStorage {
     fn write(&mut self, entry: &Entry) {
         let serialized = self.serialize_entry(entry);
-        self.file.write_all(&serialized).unwrap();
-        File::sync_data(&self.file).unwrap();
-        File::sync_all(&self.file).unwrap();
+        self.active_data_file.write_all(&serialized).unwrap();
+        File::sync_data(&self.active_data_file).unwrap();
+        File::sync_all(&self.active_data_file).unwrap();
     }
 }
 
