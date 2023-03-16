@@ -4,6 +4,8 @@ use std::{
     io::Write,
 };
 
+use crate::bitcask::Storage;
+
 const X25: Crc<u16> = Crc::<u16>::new(&CRC_16_IBM_SDLC);
 
 pub struct Entry<'a> {
@@ -42,13 +44,6 @@ impl DiskStorage {
         Self { file }
     }
 
-    pub fn write(&mut self, entry: &Entry) {
-        let serialized = self.serialize_entry(entry);
-        self.file.write_all(&serialized).unwrap();
-        File::sync_data(&self.file).unwrap();
-        File::sync_all(&self.file).unwrap();
-    }
-
     fn serialize_entry(&self, entry: &Entry) -> Vec<u8> {
         let key_size = entry.key.len();
         let value_size = entry.value.len();
@@ -66,6 +61,15 @@ impl DiskStorage {
         buf[0..2].copy_from_slice(&crc);
 
         buf
+    }
+}
+
+impl Storage for DiskStorage {
+    fn write(&mut self, entry: &Entry) {
+        let serialized = self.serialize_entry(entry);
+        self.file.write_all(&serialized).unwrap();
+        File::sync_data(&self.file).unwrap();
+        File::sync_all(&self.file).unwrap();
     }
 }
 
