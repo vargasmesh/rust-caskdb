@@ -1,5 +1,8 @@
 use crc::{Crc, CRC_16_IBM_SDLC};
-use std::fs::{File, OpenOptions};
+use std::{
+    fs::{File, OpenOptions},
+    io::Write,
+};
 
 const X25: Crc<u16> = Crc::<u16>::new(&CRC_16_IBM_SDLC);
 
@@ -27,6 +30,13 @@ impl DiskStorage {
 
     pub fn from_file(file: File) -> Self {
         Self { file }
+    }
+
+    pub fn write(&mut self, entry: &Entry) {
+        let serialized = self.serialize_entry(entry);
+        self.file.write_all(&serialized).unwrap();
+        File::sync_data(&self.file).unwrap();
+        File::sync_all(&self.file).unwrap();
     }
 
     fn serialize_entry(&self, entry: &Entry) -> Vec<u8> {
