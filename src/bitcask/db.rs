@@ -1,7 +1,11 @@
 use crate::pkg::now;
 
+pub trait ValuePosition {
+    fn get_value(&self) -> Vec<u8>;
+}
+
 pub trait Storage {
-    fn write(&mut self, entry: &Entry);
+    fn write(&mut self, entry: &Entry) -> Box<dyn ValuePosition>;
 }
 
 pub struct Entry<'a> {

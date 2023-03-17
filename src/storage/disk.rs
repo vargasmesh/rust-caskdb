@@ -1,10 +1,10 @@
 use crc::{Crc, CRC_16_IBM_SDLC};
 use std::{
     fs::{create_dir_all, File},
-    io::Write,
+    io::{Read, Seek, Write},
 };
 
-use crate::bitcask::{Entry, Storage};
+use crate::bitcask::{Entry, Storage, ValuePosition};
 
 const X25: Crc<u16> = Crc::<u16>::new(&CRC_16_IBM_SDLC);
 
@@ -16,6 +16,7 @@ struct DataFile {
 
 pub struct DiskStorage {
     active_data_file: DataFile,
+    current_position: usize,
 }
 
 impl DiskStorage {
@@ -24,6 +25,7 @@ impl DiskStorage {
         create_dir_all(directory).unwrap();
         let file = File::create(format!("{}/{}", directory, filename,)).unwrap();
         Self {
+            current_position: 0,
             active_data_file: DataFile {
                 file,
                 directory: directory.to_string(),
@@ -56,12 +58,43 @@ impl DiskStorage {
     }
 }
 
+struct DiskValuePosition {
+    file_id: String,
+    value_size: usize,
+    value_position: usize,
+}
+
+impl ValuePosition for DiskValuePosition {
+    fn get_value(&self) -> Vec<u8> {
+        let mut file = File::open(&self.file_id).unwrap();
+        let mut buf = vec![0; self.value_size];
+        file.seek(std::io::SeekFrom::Start(self.value_position as u64))
+            .unwrap();
+        file.read_exact(&mut buf).unwrap();
+
+        buf
+    }
+}
+
 impl Storage for DiskStorage {
-    fn write(&mut self, entry: &Entry) {
+    fn write(&mut self, entry: &Entry) -> Box<dyn ValuePosition> {
         let serialized = self.serialize_entry(entry);
+
         self.active_data_file.file.write_all(&serialized).unwrap();
         File::sync_data(&self.active_data_file.file).unwrap();
         File::sync_all(&self.active_data_file.file).unwrap();
+
+        let value_position = self.current_position + 26 + entry.key.len();
+        self.current_position += serialized.len();
+
+        Box::new(DiskValuePosition {
+            file_id: format!(
+                "{}/{}",
+                self.active_data_file.directory, self.active_data_file.filename
+            ),
+            value_size: entry.value.len(),
+            value_position,
+        })
     }
 }
 
