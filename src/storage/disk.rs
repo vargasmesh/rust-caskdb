@@ -8,21 +8,27 @@ use crate::bitcask::{Entry, Storage};
 
 const X25: Crc<u16> = Crc::<u16>::new(&CRC_16_IBM_SDLC);
 
+struct DataFile {
+    file: File,
+    directory: String,
+    filename: String,
+}
+
 pub struct DiskStorage {
-    active_data_file: std::fs::File,
+    active_data_file: DataFile,
 }
 
 impl DiskStorage {
     pub fn new(directory: &str) -> Self {
+        let filename = DiskStorage::create_active_filename();
         create_dir_all(directory).unwrap();
-        let file = File::create(format!(
-            "{}/{}",
-            directory,
-            DiskStorage::create_active_filename()
-        ))
-        .unwrap();
+        let file = File::create(format!("{}/{}", directory, filename,)).unwrap();
         Self {
-            active_data_file: file,
+            active_data_file: DataFile {
+                file,
+                directory: directory.to_string(),
+                filename,
+            },
         }
     }
 
@@ -53,9 +59,9 @@ impl DiskStorage {
 impl Storage for DiskStorage {
     fn write(&mut self, entry: &Entry) {
         let serialized = self.serialize_entry(entry);
-        self.active_data_file.write_all(&serialized).unwrap();
-        File::sync_data(&self.active_data_file).unwrap();
-        File::sync_all(&self.active_data_file).unwrap();
+        self.active_data_file.file.write_all(&serialized).unwrap();
+        File::sync_data(&self.active_data_file.file).unwrap();
+        File::sync_all(&self.active_data_file.file).unwrap();
     }
 }
 
