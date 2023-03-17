@@ -2,7 +2,7 @@ use caskdb::{Bitcask, DiskStorage};
 use tempfile::tempdir;
 
 #[test]
-fn get_hello_world() {
+fn test_disk_storage_set_and_get() {
     let tempdir = tempdir().unwrap();
     let disk_storage = Box::new(DiskStorage::new(tempdir.path().to_str().unwrap()));
     let mut bitcask = Bitcask::new(disk_storage);
