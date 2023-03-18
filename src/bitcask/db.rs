@@ -46,8 +46,8 @@ impl Bitcask {
     }
 
     pub fn set(&mut self, key: Vec<u8>, value: Vec<u8>) {
-        let entry = Entry::new(key.clone(), value, now());
+        let entry = Entry::new(key, value, now());
         let value_position = self.storage.write(&entry);
-        self.keydir.insert(key, value_position);
+        self.keydir.insert(entry.key, value_position);
     }
 }
