@@ -108,8 +108,8 @@ mod tests {
     fn test_serialize_entry() {
         let entry = Entry {
             timestamp: datetime!(2021-01-01 00:00:00).assume_utc().unix_timestamp() as u64,
-            key: "foo".as_bytes(),
-            value: "bar".as_bytes(),
+            key: b"foo".to_vec(),
+            value: b"bar".to_vec(),
         };
         let directory = tempdir().unwrap();
         let storage = DiskStorage::new(directory.path().to_str().unwrap());
