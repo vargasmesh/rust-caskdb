@@ -1,6 +1,6 @@
-use std::collections::HashMap;
-
 use crate::pkg::now;
+
+use super::keydir::{HashMapKeyDir, KeyDir};
 
 pub trait ValuePosition {
     fn get_value(&self) -> Vec<u8>;
@@ -28,26 +28,24 @@ impl Entry {
 
 pub struct Bitcask {
     storage: Box<dyn Storage>,
-    keydir: HashMap<Vec<u8>, Box<dyn ValuePosition>>,
+    keydir: Box<dyn KeyDir>,
 }
 
 impl Bitcask {
     pub fn new(storage: Box<dyn Storage>) -> Self {
         Self {
             storage,
-            keydir: HashMap::new(),
+            keydir: Box::new(HashMapKeyDir::new()),
         }
     }
 
     pub fn get(&self, key: Vec<u8>) -> Option<Vec<u8>> {
-        self.keydir
-            .get(&key)
-            .map(|value_position| value_position.get_value())
+        self.keydir.get(key)
     }
 
     pub fn set(&mut self, key: Vec<u8>, value: Vec<u8>) {
         let entry = Entry::new(key, value, now());
         let value_position = self.storage.write(&entry);
-        self.keydir.insert(entry.key, value_position);
+        self.keydir.set(entry.key, value_position);
     }
 }
