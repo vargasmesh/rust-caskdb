@@ -1,10 +1,10 @@
 use crc::{Crc, CRC_16_IBM_SDLC};
 use std::{
-    fs::{create_dir_all, File},
-    io::{Read, Seek, Write},
+    fs::{canonicalize, create_dir_all, read_dir, File},
+    io::{Read, Seek, SeekFrom, Write},
 };
 
-use crate::bitcask::{Entry, Storage, ValuePosition};
+use crate::bitcask::{Entry, KeyDir, Storage, ValuePosition};
 
 const X25: Crc<u16> = Crc::<u16>::new(&CRC_16_IBM_SDLC);
 
@@ -94,6 +94,50 @@ impl Storage for DiskStorage {
             ),
             value_size: entry.value.len(),
             value_position,
+        })
+    }
+
+    fn load_keydir(&self, keydir: &mut dyn KeyDir) {
+        let mut files = read_dir(&self.active_data_file.directory)
+            .unwrap()
+            .map(|f| canonicalize(f.unwrap().path()).unwrap())
+            .take_while(|path| path.is_file())
+            .map(|path| path.file_name().unwrap().to_str().unwrap().to_string())
+            .collect::<Vec<String>>();
+
+        files.sort();
+        files.iter().for_each(|path| {
+            let mut file =
+                File::open(format!("{}/{}", self.active_data_file.directory, path)).unwrap();
+
+            let stream_size = file.metadata().unwrap().len();
+
+            let mut offset = 10;
+            while offset < stream_size {
+                match file.seek(SeekFrom::Current(offset as i64)) {
+                    Ok(_) => {
+                        let mut key_size_buf = [0; 8];
+                        file.read_exact(&mut key_size_buf).unwrap();
+                        let key_size = u64::from_be_bytes(key_size_buf);
+                        let mut value_size_buf = [0; 8];
+                        file.read_exact(&mut value_size_buf).unwrap();
+                        let value_size = u64::from_be_bytes(value_size_buf);
+                        let mut key_buffer = vec![0; key_size as usize];
+                        file.read_exact(&mut key_buffer).unwrap();
+                        let value_position = offset + 16 + key_size;
+                        keydir.set(
+                            key_buffer,
+                            Box::new(DiskValuePosition {
+                                file_id: format!("{}/{}", self.active_data_file.directory, path),
+                                value_size: value_size as usize,
+                                value_position: value_position as usize,
+                            }),
+                        );
+                        offset += 16 + key_size + value_size;
+                    }
+                    Err(_) => return,
+                };
+            }
         })
     }
 }

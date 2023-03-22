@@ -8,6 +8,7 @@ pub trait ValuePosition {
 
 pub trait Storage {
     fn write(&mut self, entry: &Entry) -> Box<dyn ValuePosition>;
+    fn load_keydir(&self, keydir: &mut dyn KeyDir);
 }
 
 pub struct Entry {
@@ -33,10 +34,9 @@ pub struct Bitcask {
 
 impl Bitcask {
     pub fn new(storage: Box<dyn Storage>) -> Self {
-        Self {
-            storage,
-            keydir: Box::new(HashMapKeyDir::new()),
-        }
+        let mut keydir = Box::new(HashMapKeyDir::new());
+        storage.load_keydir(keydir.as_mut());
+        Self { storage, keydir }
     }
 
     pub fn get(&self, key: Vec<u8>) -> Option<Vec<u8>> {
